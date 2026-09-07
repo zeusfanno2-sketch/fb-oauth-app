@@ -187,8 +187,8 @@ app.get("/", (req, res) => {
   if (!sess || !sess.longToken) {
     return res.send(shell("MR NICE — Connect", `
       <div class="wrap">
-        <h1>Connect your<br>Facebook account</h1>
-        <p class="sub">Kết nối tài khoản Facebook để sử dụng công cụ MR NICE.</p>
+        <h1>Xin chào 👋</h1>
+        <p class="sub">Kết nối để sử dụng Nice Stream.</p>
         <a class="btn" href="/login">Connect Account</a>
         <a class="link-btn" href="${escapeHtml(TOOL_URL)}">Back to Tool</a>
       </div>`));
