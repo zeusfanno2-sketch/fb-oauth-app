@@ -661,14 +661,15 @@ function fbErrorHint(code) {
 app.post("/api/live/end", async (req, res) => {
   const user = requireApiUser(req, res);
   if (!user) return;
-  const { connection_id, video_id } = req.body || {};
-  if (!connection_id || !video_id) return res.status(400).json({ ok: false, message: "Thieu connection_id hoac video_id" });
+  const { connection_id, page_id, video_id } = req.body || {};
+  if (!connection_id || !page_id || !video_id) return res.status(400).json({ ok: false, message: "Thieu connection_id/page_id/video_id" });
   const conn = userConns(user.id).find((c) => c.id === connection_id);
   if (!conn) return res.status(404).json({ ok: false, message: "Khong tim thay connection" });
   const pages = loadPages().filter((p) => p.connection_id === conn.id);
-  const page = pages.find((p) => p.page_token_enc) || pages[0];
+  const page = pages.find((p) => p.page_id === String(page_id)) || pages.find((p) => p.page_token_enc) || pages[0];
   if (!page) return res.status(404).json({ ok: false, message: "Khong co page token" });
   const pageToken = decrypt(page.page_token_enc);
+  if (!pageToken) return res.status(403).json({ ok: false, message: "Page token rong" });
   try {
     const r = await fetch(`${GRAPH}/${video_id}?access_token=${encodeURIComponent(pageToken)}`, {
       method: "POST",
@@ -678,6 +679,29 @@ app.post("/api/live/end", async (req, res) => {
     const j = await r.json();
     if (j.error) return res.status(200).json({ ok: false, message: redactToken(j.error.message), fb_error_code: j.error.code });
     return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, message: redactToken(err.message) });
+  }
+});
+
+app.get("/api/live/:videoId/status", async (req, res) => {
+  const user = requireApiUser(req, res);
+  if (!user) return;
+  const { connection_id, page_id } = req.query || {};
+  const videoId = req.params.videoId;
+  if (!connection_id || !page_id || !videoId) return res.status(400).json({ ok: false, message: "Thieu connection_id/page_id/video_id" });
+  const conn = userConns(user.id).find((c) => c.id === connection_id);
+  if (!conn) return res.status(404).json({ ok: false, message: "Khong tim thay connection" });
+  const pages = loadPages().filter((p) => p.connection_id === conn.id);
+  const page = pages.find((p) => p.page_id === String(page_id));
+  if (!page) return res.status(404).json({ ok: false, message: "Page khong thuoc connection" });
+  const pageToken = decrypt(page.page_token_enc);
+  if (!pageToken) return res.status(403).json({ ok: false, message: "Page token rong" });
+  try {
+    const r = await fetch(`${GRAPH}/${videoId}?fields=id,status,permalink_url&access_token=${encodeURIComponent(pageToken)}`);
+    const j = await r.json();
+    if (j.error) return res.status(200).json({ ok: false, message: redactToken(j.error.message), fb_error_code: j.error.code });
+    return res.json({ ok: true, video: j });
   } catch (err) {
     return res.status(500).json({ ok: false, message: redactToken(err.message) });
   }
