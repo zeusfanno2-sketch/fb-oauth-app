@@ -322,7 +322,6 @@ function shell(title, body, userHtml) {
     ${userHtml || ""}
   </header>
   <main>${body}</main>
-  <div class="footer">MR NICE</div>
 </body></html>`;
 }
 
