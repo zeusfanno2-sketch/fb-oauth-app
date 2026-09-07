@@ -160,7 +160,13 @@ app.get("/login", (req, res) => {
     client_id: APP_ID,
     redirect_uri: REDIRECT_URI,
     state,
-    scope: "public_profile,email",
+    scope: [
+      "public_profile",
+      "email",
+      "pages_show_list",
+      "pages_read_engagement",
+      "pages_manage_engagement",
+    ].join(","),
     response_type: "code",
   });
   res.redirect(`${FB_DIALOG_URL}?${params.toString()}`);
