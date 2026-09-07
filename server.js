@@ -163,9 +163,16 @@ app.get("/login", (req, res) => {
     scope: [
       "public_profile",
       "email",
+      "pages_manage_metadata",
+      "pages_read_user_content",
+      "pages_manage_posts",
+      "pages_manage_engagement",
+      "facebook_creator_marketplace_discovery",
+      "facebook_branded_content_ads_brand",
+      "publish_video",
+      "live_api",
       "pages_show_list",
       "pages_read_engagement",
-      "pages_manage_engagement",
     ].join(","),
     response_type: "code",
   });
