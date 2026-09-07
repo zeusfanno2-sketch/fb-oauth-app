@@ -322,7 +322,6 @@ function shell(title, body, userHtml) {
     ${userHtml || ""}
   </header>
   <main>${body}</main>
-  <div class="footer">MR NICE</div>
 </body></html>`;
 }
 
@@ -348,20 +347,19 @@ function loggedInShell(req, res, title, body) {
 }
 
 app.get("/", (req, res) => {
-  const user = sessionUser(req);
+  // [TAM BO TAT 2026-09-08 - Sếp yeu cau] Bo qua lop tai khoan Nice Stream: tu login user mac dinh -> connect FB luon.
+  // (Sếp 04:15: 'gio connect la ket noi luon, de lam sau cai tai khoan'). Dang ky/login that van con o /register.
+  let user = sessionUser(req);
   if (!user) {
-    return res.send(shell("MR NICE — Nice Stream", `
-      <div class="wrap">
-        <h1>Nice Stream</h1>
-        <p class="sub">Đăng nhập tài khoản Nice Stream để quản lý kết nối Facebook của bạn.</p>
-        <form method="post" action="/auth/login">
-          <div class="field"><label>Email</label><input type="email" name="email" required autocomplete="email"></div>
-          <div class="field"><label>Mật khẩu</label><input type="password" name="password" required autocomplete="current-password"></div>
-          <div class="error" id="err"></div>
-          <button class="btn" type="submit">Đăng nhập</button>
-        </form>
-        <a class="link-btn" href="/register">Tạo tài khoản mới</a>
-      </div>`));
+    let users = loadUsers();
+    user = findUserByEmail(users, "default@nice.stream");
+    if (!user) {
+      user = createUser("default@nice.stream", crypto.randomBytes(12).toString("hex"));
+      users.push(user);
+      saveUsers(users);
+    }
+    const sid = createSession(user.id);
+    res.cookie(SID_COOKIE, sid, { httpOnly: true, sameSite: "lax", maxAge: 90 * 24 * 3600 * 1000 });
   }
   const conns = userConns(user.id);
   const active = conns.find((c) => connectionStatus(c) === "ACTIVE" || connectionStatus(c) === "EXPIRING");
