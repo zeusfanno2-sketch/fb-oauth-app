@@ -190,7 +190,6 @@ app.get("/", (req, res) => {
         <h1>Xin chào 👋</h1>
         <p class="sub">Kết nối để sử dụng Nice Stream.</p>
         <a class="btn" href="/login">Connect Account</a>
-        <a class="link-btn" href="${escapeHtml(TOOL_URL)}">Back to Tool</a>
       </div>`));
   }
   // ĐÃ kết nối → màn hình xác nhận (success screen)
@@ -212,7 +211,6 @@ app.get("/", (req, res) => {
             <div class="badge">${CHECK_SVG.replace('width="32" height="32"', 'width="13" height="13"')} Active</div>
           </div>
         </div>
-        <a class="btn" href="${escapeHtml(TOOL_URL)}">Back to Tool</a>
         <a class="link-btn" href="/logout">Disconnect account</a>
       </div>`,
       `<div class="user-chip">${avatarHtml(pic, name)}<span>${escapeHtml(name)}</span><span class="caret">▾</span></div>`));
