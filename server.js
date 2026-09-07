@@ -322,6 +322,7 @@ function shell(title, body, userHtml) {
     ${userHtml || ""}
   </header>
   <main>${body}</main>
+  <div class="footer">MR NICE</div>
 </body></html>`;
 }
 
@@ -347,19 +348,20 @@ function loggedInShell(req, res, title, body) {
 }
 
 app.get("/", (req, res) => {
-  // [TAM BO TAT 2026-09-08] Bo qua lop tai khoan Nice Stream: tu login user mac dinh -> connect FB luon
-  // (Sếp: 'gio connect la ket noi luon, de lam sau cai tai khoan'). Register/login that van giu nguyen.
-  let user = sessionUser(req);
+  const user = sessionUser(req);
   if (!user) {
-    let users = loadUsers();
-    user = findUserByEmail(users, "default@nice.stream");
-    if (!user) {
-      user = createUser("default@nice.stream", crypto.randomBytes(12).toString("hex"));
-      users.push(user);
-      saveUsers(users);
-    }
-    const sid = createSession(user.id);
-    res.cookie(SID_COOKIE, sid, { httpOnly: true, sameSite: "lax", maxAge: 90 * 24 * 3600 * 1000 });
+    return res.send(shell("MR NICE — Nice Stream", `
+      <div class="wrap">
+        <h1>Nice Stream</h1>
+        <p class="sub">Đăng nhập tài khoản Nice Stream để quản lý kết nối Facebook của bạn.</p>
+        <form method="post" action="/auth/login">
+          <div class="field"><label>Email</label><input type="email" name="email" required autocomplete="email"></div>
+          <div class="field"><label>Mật khẩu</label><input type="password" name="password" required autocomplete="current-password"></div>
+          <div class="error" id="err"></div>
+          <button class="btn" type="submit">Đăng nhập</button>
+        </form>
+        <a class="link-btn" href="/register">Tạo tài khoản mới</a>
+      </div>`));
   }
   const conns = userConns(user.id);
   const active = conns.find((c) => connectionStatus(c) === "ACTIVE" || connectionStatus(c) === "EXPIRING");
@@ -379,8 +381,6 @@ app.get("/", (req, res) => {
         <h1>Hi ${escapeHtml(u.name || "")}! 👋</h1>
         <p class="sub">Tài khoản của bạn đã được kết nối thành công.</p>
         <div class="status-pill"><span class="dot"></span>${escapeHtml(active.fb_name)}</div>
-        <a class="btn" href="/account">Về tài khoản</a>
-        <a class="link-btn" href="/oauth/disconnect?id=${encodeURIComponent(active.id)}">Disconnect account</a>
       </div>`);
 });
 
@@ -388,7 +388,6 @@ app.get("/register", (req, res) => {
   return res.send(shell("MR NICE — Đăng ký", `
     <div class="wrap">
       <h1>Tạo tài khoản</h1>
-      <p class="sub">Tài khoản Nice Stream — không phải tài khoản Facebook.</p>
       <form method="post" action="/auth/register">
         <div class="field"><label>Email</label><input type="email" name="email" required></div>
         <div class="field"><label>Mật khẩu (tối thiểu 8 ký tự)</label><input type="password" name="password" required minlength="8"></div>
