@@ -472,6 +472,31 @@ app.get("/oauth/login", (req, res) => {
   res.redirect(`https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${p}`);
 });
 
+app.post("/api/oauth/start", async (req, res) => {
+  const user = requireApiUser(req, res);
+  if (!user) return;
+  const state = crypto.randomBytes(24).toString("hex");
+  const pendings = readJson("pending.json", {});
+  pendings[state] = { user_id: user.id, created_at: Date.now() };
+  writeJson("pending.json", pendings);
+  const url = `${BASE_URL}/oauth/device?state=${encodeURIComponent(state)}`;
+  return res.json({ ok: true, url });
+});
+
+app.get("/oauth/device", (req, res) => {
+  const state = String(req.query.state || "");
+  const pendings = readJson("pending.json", {});
+  const rec = pendings[state];
+  if (!rec || Date.now() - rec.created_at > 15 * 60 * 1000) {
+    return res.status(400).send("Link ket noi het han hoac khong hop le — hay bam lai nut Ket noi trong tool.");
+  }
+  delete pendings[state];
+  writeJson("pending.json", pendings);
+  const sid = createSession(rec.user_id);
+  res.cookie(SID_COOKIE, sid, { httpOnly: true, sameSite: "lax", maxAge: 90 * 24 * 3600 * 1000 });
+  res.redirect("/oauth/login");
+});
+
 app.get("/auth/callback", async (req, res) => {
   const user = sessionUser(req);
   if (!user) return res.redirect("/");
