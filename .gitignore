@@ -1,0 +1,5 @@
+# Không bao giờ đẩy những thứ này lên GitHub
+node_modules/
+.env
+*.log
+.DS_Store
