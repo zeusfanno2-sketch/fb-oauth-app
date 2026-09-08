@@ -355,21 +355,6 @@ function shell(title, body, userHtml) {
   </header>
   <main>${body}</main>
   <div class="footer">MR NICE</div>
-  ${ADMIN_KEY ? `<div style="text-align:center;padding:6px 0 14px"><a href="#" onclick="toggleLogin(event)" style="color:#71717a;font-size:12px;text-decoration:none">⚙ Bật/Tắt đăng nhập</a></div>
-  <script>
-  async function toggleLogin(e) {
-    e.preventDefault();
-    try {
-      const st = await fetch('/api/admin/state').then(r => r.json());
-      const k = prompt('Admin key:');
-      if (!k) return;
-      const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ admin_key: k, enabled: !st.login }) });
-      const j = await r.json();
-      if (!j.ok) { alert('Sai admin key hoac loi: ' + (j.message || '')); return; }
-      location.reload();
-    } catch (err) { alert('Loi: ' + err); }
-  }
-  </script>` : ""}
 </body></html>`;
 }
 
