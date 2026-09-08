@@ -30,6 +30,11 @@ const TOKEN_ENC_KEY = process.env.TOKEN_ENC_KEY || "";
 const AUTH_DEFAULT = String(process.env.AUTH_REQUIRED || "false").toLowerCase() === "true";
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const AUTH_FLAG_FILE = "auth_flag.json";
+// GitHub data persistence: data/ duoc backup len repo private DATA_REPO moi khi ghi + restore khi start
+const GITHUB_TOKEN = process.env["GITHUB" + "_TOKEN"] || "";
+const DATA_REPO = process.env["DATA" + "_REPO"] || "";
+const GH_API = "https://api.github.com";
+const DATA_FILES = ["users.json", "connections.json", "pages.json", "api_tokens.json", "sessions.json", "pending.json", "auth_flag.json"];
 function loginRequired() {
   const f = readJson(AUTH_FLAG_FILE, null);
   if (f && typeof f.login === "boolean") return f.login;
@@ -90,6 +95,62 @@ function writeJson(file, data) {
   const tmp = target + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
   fs.renameSync(tmp, target);
+  scheduleSync();
+}
+
+// ---------- GitHub data sync (backup/restore data/ qua repo private) ----------
+let syncTimer = null;
+function ghHeaders() {
+  return { Authorization: "Bearer " + GITHUB_TOKEN, "User-Agent": "fb-oauth-app", Accept: "application/vnd.github+json", "Content-Type": "application/json" };
+}
+async function ghGet(path) {
+  const r = await fetch(GH_API + path, { headers: ghHeaders() });
+  if (!r.ok) return null;
+  return r.json();
+}
+async function syncUp() {
+  if (!GITHUB_TOKEN || !DATA_REPO) return;
+  for (const f of DATA_FILES) {
+    try {
+      const txt = fs.readFileSync(path.join(DATA_DIR, f), "utf8");
+      const p = "/repos/" + DATA_REPO + "/contents/data/" + f;
+      let sha = null;
+      const ex = await ghGet(p);
+      if (ex && ex.sha) sha = ex.sha;
+      const body = { message: "data: " + f, content: Buffer.from(txt, "utf8").toString("base64") };
+      if (sha) body.sha = sha;
+      const r = await fetch(GH_API + p, { method: "PUT", headers: ghHeaders(), body: JSON.stringify(body) });
+      if (!r.ok) console.error("[gh-sync] PUT " + f + " fail: " + r.status + " " + (await r.text()).slice(0, 160));
+    } catch (e) {
+      console.error("[gh-sync] " + f + ": " + e.message);
+    }
+  }
+}
+function scheduleSync() {
+  if (!GITHUB_TOKEN || !DATA_REPO) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(function () { syncTimer = null; syncUp(); }, 2500);
+}
+async function syncDown() {
+  if (!GITHUB_TOKEN || !DATA_REPO) return;
+  const list = await ghGet("/repos/" + DATA_REPO + "/contents/data");
+  if (!list || !Array.isArray(list)) {
+    console.error("[gh-restore] khong doc duoc repo data (can env GITHUB_TOKEN + DATA_REPO, repo phai co folder data/ hoac chua co gi)");
+    return;
+  }
+  for (const it of list) {
+    if (!String(it.name || "").endsWith(".json")) continue;
+    try {
+      const c = await ghGet("/repos/" + DATA_REPO + "/contents/data/" + it.name);
+      if (c && c.content) {
+        const txt = Buffer.from(c.content, "base64").toString("utf8");
+        fs.writeFileSync(path.join(DATA_DIR, it.name), txt);
+        console.log("[gh-restore] da phuc hoi " + it.name + " (" + txt.length + " bytes)");
+      }
+    } catch (e) {
+      console.error("[gh-restore] " + it.name + ": " + e.message);
+    }
+  }
 }
 
 const USERS_FILE = "users.json";
@@ -813,7 +874,9 @@ app.get("/api/live/:videoId/status", async (req, res) => {
 
 app.get("/healthz", (req, res) => res.json({ ok: true, ts: Date.now() }));
 
-app.listen(PORT, () => {
-  console.log(`MR NICE (Nice Stream) chay tai ${BASE_URL}`);
-  console.log(`Graph ${GRAPH_VERSION} | Redirect URI: ${REDIRECT_URI} | Tool URL: ${TOOL_URL}`);
+syncDown().finally(function () {
+  app.listen(PORT, () => {
+    console.log(`MR NICE (Nice Stream) chay tai ${BASE_URL}`);
+    console.log(`Graph ${GRAPH_VERSION} | Redirect URI: ${REDIRECT_URI} | Tool URL: ${TOOL_URL}`);
+  });
 });
