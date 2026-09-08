@@ -15,7 +15,14 @@ const REDIRECT_URI = process.env.REDIRECT_URI;
 const GRAPH_VERSION = process.env.GRAPH_VERSION || "v25.0";
 const PORT = process.env.PORT || 3000;
 const TOOL_URL = process.env.TOOL_URL || "/";
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const BASE_URL = process.env.BASE_URL || (() => {
+  // mac dinh lay origin cua REDIRECT_URI (vd https://fb-oauth-app.onrender.com) de device URL khong bao gio tro ve localhost
+  try {
+    return new URL(REDIRECT_URI).origin;
+  } catch (e) {
+    return `http://localhost:${PORT}`;
+  }
+})();
 const SESSION_SECRET = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const TOKEN_ENC_KEY = process.env.TOKEN_ENC_KEY || "";
 // AUTH_REQUIRED: "true" = bat man hinh dang nhap (phai co tai khoan); mac dinh "false" = ai mo web cung dung duoc (public).
