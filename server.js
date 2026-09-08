@@ -427,6 +427,7 @@ app.get("/", (req, res) => {
         <h1>Đã kết nối thành công</h1>
         <div class="status-pill"><span class="dot"></span>${escapeHtml(active.fb_name)}</div>
         <p class="sub">Bạn có thể đóng tab này và quay lại tool — danh sách Page sẽ tự cập nhật.</p>
+        <script>setTimeout(function () { try { window.close(); } catch (e) {} }, 1500);</script>
       </div>`));
 });
 
