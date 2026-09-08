@@ -294,12 +294,16 @@ async function refreshPagesForConnection(conn, log) {
 
 const SHELL_CSS = `
   :root { --bg:#fafafa; --card:#ffffff; --ink:#0d0d0f; --muted:#71717a; --line:#e7e7ea;
-          --ok:#16a34a; --ok-bg:#e8f7ee; --danger:#e41e3f; --accent:#0d0d0f; }
-  html { color-scheme: light; }
+          --ok:#16a34a; --ok-bg:#e8f7ee; --danger:#e41e3f; --accent:#0d0d0f; --btn-color:#fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f0f12; --card:#19191e; --ink:#f4f4f6; --muted:#9b9ba3; --line:#2b2b32;
+            --ok:#4ade80; --ok-bg:#15352a; --danger:#f87171; --accent:#f4f4f6; --btn-color:#0d0d0f; }
+  }
+  html { color-scheme: light dark; }
   * { box-sizing:border-box; margin:0; padding:0; }
   html,body { height:100%; }
   body { font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-         background:#fafafa; color:var(--ink); display:flex; flex-direction:column; min-height:100vh; }
+         background:var(--bg); color:var(--ink); display:flex; flex-direction:column; min-height:100vh; }
   .header { display:flex; align-items:center; justify-content:space-between; padding:18px 28px; }
   .logo { font-weight:800; letter-spacing:.14em; font-size:15px; text-transform:uppercase; }
   .logo em { font-style:normal; font-weight:300; }
@@ -323,7 +327,7 @@ const SHELL_CSS = `
   .card .name { font-size:17px; font-weight:800; }
   .card .meta { color:var(--muted); font-size:13.5px; margin-top:2px; }
   .btn { display:inline-block; margin-top:20px; width:100%; padding:15px 20px; border-radius:14px;
-         background:var(--accent); color:#fff; font-size:16px; font-weight:700; text-decoration:none;
+         background:var(--accent); color:var(--btn-color); font-size:16px; font-weight:700; text-decoration:none;
          border:none; cursor:pointer; font-family:inherit; }
   .btn:hover { opacity:.92; }
   .btn.secondary { background:transparent; color:var(--ink); border:1px solid var(--line); }
@@ -417,7 +421,7 @@ app.get("/", (req, res) => {
   return res.send(shell("Nice Stream — Đã kết nối", `
       <div class="wrap">
         <div class="check" style="width:84px;height:84px">${CHECK_SVG}</div>
-        <h1 style="font-size:52px;font-weight:900;color:#000;letter-spacing:-.02em">Connect Success</h1>
+        <h1 style="font-size:52px;font-weight:900;color:var(--ink);letter-spacing:-.02em">Connect Success</h1>
         <script>setTimeout(function () { try { window.close(); } catch (e) {} }, 3000);</script>
       </div>`));
 });
