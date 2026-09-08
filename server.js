@@ -18,8 +18,19 @@ const TOOL_URL = process.env.TOOL_URL || "/";
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const SESSION_SECRET = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const TOKEN_ENC_KEY = process.env.TOKEN_ENC_KEY || "";
-// AUTH_REQUIRED: "true" = bat man hinh dang nhap (phai co tai khoan); mac dinh "false" = ai mo web cung dung duoc (public)
-const AUTH_REQUIRED = String(process.env.AUTH_REQUIRED || "false").toLowerCase() === "true";
+// AUTH_REQUIRED: "true" = bat man hinh dang nhap (phai co tai khoan); mac dinh "false" = ai mo web cung dung duoc (public).
+// Bật/tắt nhanh bang nut admin (can env ADMIN_KEY) -> ghi data/auth_flag.json (mat sau deploy -> ve mac dinh env)
+const AUTH_DEFAULT = String(process.env.AUTH_REQUIRED || "false").toLowerCase() === "true";
+const ADMIN_KEY = process.env.ADMIN_KEY || "";
+const AUTH_FLAG_FILE = "auth_flag.json";
+function loginRequired() {
+  const f = readJson(AUTH_FLAG_FILE, null);
+  if (f && typeof f.login === "boolean") return f.login;
+  return AUTH_DEFAULT;
+}
+function setLoginRequired(v) {
+  writeJson(AUTH_FLAG_FILE, { login: !!v, updated_at: Date.now() });
+}
 const PUBLIC_EMAIL = "public@nicestream.local";
 const DATA_DIR = path.join(__dirname, "data");
 const SID_COOKIE = "ns_sid";
@@ -128,7 +139,7 @@ function publicUser() {
 }
 
 function effectiveUser(req) {
-  if (!AUTH_REQUIRED) return publicUser();
+  if (!loginRequired()) return publicUser();
   return sessionUser(req);
 }
 
@@ -175,7 +186,7 @@ function bearerUser(req) {
 }
 
 function authUser(req) {
-  if (!AUTH_REQUIRED) return { user: publicUser(), via: "public" };
+  if (!loginRequired()) return { user: publicUser(), via: "public" };
   const bearer = bearerUser(req);
   if (bearer) return { user: bearer, via: "api" };
   const web = sessionUser(req);
@@ -344,6 +355,21 @@ function shell(title, body, userHtml) {
   </header>
   <main>${body}</main>
   <div class="footer">MR NICE</div>
+  ${ADMIN_KEY ? `<div style="text-align:center;padding:6px 0 14px"><a href="#" onclick="toggleLogin(event)" style="color:#71717a;font-size:12px;text-decoration:none">⚙ Bật/Tắt đăng nhập</a></div>
+  <script>
+  async function toggleLogin(e) {
+    e.preventDefault();
+    try {
+      const st = await fetch('/api/admin/state').then(r => r.json());
+      const k = prompt('Admin key:');
+      if (!k) return;
+      const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ admin_key: k, enabled: !st.login }) });
+      const j = await r.json();
+      if (!j.ok) { alert('Sai admin key hoac loi: ' + (j.message || '')); return; }
+      location.reload();
+    } catch (err) { alert('Loi: ' + err); }
+  }
+  </script>` : ""}
 </body></html>`;
 }
 
@@ -387,22 +413,21 @@ app.get("/", (req, res) => {
   const conns = userConns(user.id);
   const active = conns.find((c) => connectionStatus(c) === "ACTIVE" || connectionStatus(c) === "EXPIRING");
   if (!active) {
-    return loggedInShell(req, res, "MR NICE — Connect", `
+    return res.send(shell("Nice Stream — Kết nối", `
       <div class="wrap">
-        <h1>Xin chào 👋</h1>
+        <h1>Nice Stream</h1>
         <p class="sub">Kết nối tài khoản Facebook để sử dụng Nice Stream.</p>
         <a class="btn" href="/oauth/login">Connect Account</a>
-        <a class="link-btn" href="/logout">Đăng xuất</a>
-      </div>`);
+      </div>`));
   }
   const u = JSON.parse(decrypt(active.user_json_enc) || "{}");
-  return loggedInShell(req, res, "MR NICE — Connected", `
+  return res.send(shell("Nice Stream — Đã kết nối", `
       <div class="wrap">
         <div class="check">${CHECK_SVG}</div>
-        <h1>Hi ${escapeHtml(u.name || "")}! 👋</h1>
-        <p class="sub">Tài khoản của bạn đã được kết nối thành công.</p>
+        <h1>Đã kết nối thành công</h1>
         <div class="status-pill"><span class="dot"></span>${escapeHtml(active.fb_name)}</div>
-      </div>`);
+        <p class="sub">Bạn có thể đóng tab này và quay lại tool — danh sách Page sẽ tự cập nhật.</p>
+      </div>`));
 });
 
 app.get("/register", (req, res) => {
@@ -596,8 +621,22 @@ app.post("/api/auth/login", (req, res) => {
   return res.json({ ok: true, api_token, email: user.email });
 });
 
+app.get("/api/admin/state", (req, res) => {
+  return res.json({ ok: true, login: loginRequired(), admin: !!ADMIN_KEY });
+});
+
+app.post("/api/admin/login", (req, res) => {
+  if (!ADMIN_KEY) return res.status(404).json({ ok: false, message: "Chua dat ADMIN_KEY tren server" });
+  if (String(req.body.admin_key || "") !== ADMIN_KEY) {
+    return res.status(403).json({ ok: false, message: "Sai admin key" });
+  }
+  const en = req.body.enabled === true || req.body.enabled === "true";
+  setLoginRequired(en);
+  return res.json({ ok: true, login: en });
+});
+
 function requireApiUser(req, res) {
-  if (!AUTH_REQUIRED) {
+  if (!loginRequired()) {
     const u = publicUser();
     if (u) return u;
   }
