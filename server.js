@@ -295,10 +295,11 @@ async function refreshPagesForConnection(conn, log) {
 const SHELL_CSS = `
   :root { --bg:#fafafa; --card:#ffffff; --ink:#0d0d0f; --muted:#71717a; --line:#e7e7ea;
           --ok:#16a34a; --ok-bg:#e8f7ee; --danger:#e41e3f; --accent:#0d0d0f; }
+  html { color-scheme: light; }
   * { box-sizing:border-box; margin:0; padding:0; }
   html,body { height:100%; }
   body { font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-         background:var(--bg); color:var(--ink); display:flex; flex-direction:column; min-height:100vh; }
+         background:#fafafa; color:var(--ink); display:flex; flex-direction:column; min-height:100vh; }
   .header { display:flex; align-items:center; justify-content:space-between; padding:18px 28px; }
   .logo { font-weight:800; letter-spacing:.14em; font-size:15px; text-transform:uppercase; }
   .logo em { font-style:normal; font-weight:300; }
@@ -416,10 +417,8 @@ app.get("/", (req, res) => {
   return res.send(shell("Nice Stream — Đã kết nối", `
       <div class="wrap">
         <div class="check">${CHECK_SVG}</div>
-        <h1>Đã kết nối thành công</h1>
-        <div class="status-pill"><span class="dot"></span>${escapeHtml(active.fb_name)}</div>
-        <p class="sub">Bạn có thể đóng tab này và quay lại tool — danh sách Page sẽ tự cập nhật.</p>
-        <script>setTimeout(function () { try { window.close(); } catch (e) {} }, 1500);</script>
+        <h1>Connect Success</h1>
+        <script>setTimeout(function () { try { window.close(); } catch (e) {} }, 3000);</script>
       </div>`));
 });
 
