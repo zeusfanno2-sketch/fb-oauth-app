@@ -416,8 +416,8 @@ app.get("/", (req, res) => {
   const u = JSON.parse(decrypt(active.user_json_enc) || "{}");
   return res.send(shell("Nice Stream — Đã kết nối", `
       <div class="wrap">
-        <div class="check">${CHECK_SVG}</div>
-        <h1>Connect Success</h1>
+        <div class="check" style="width:84px;height:84px">${CHECK_SVG}</div>
+        <h1 style="font-size:52px;font-weight:900;color:#000;letter-spacing:-.02em">Connect Success</h1>
         <script>setTimeout(function () { try { window.close(); } catch (e) {} }, 3000);</script>
       </div>`));
 });
