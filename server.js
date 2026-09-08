@@ -18,6 +18,9 @@ const TOOL_URL = process.env.TOOL_URL || "/";
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const SESSION_SECRET = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const TOKEN_ENC_KEY = process.env.TOKEN_ENC_KEY || "";
+// AUTH_REQUIRED: "true" = bat man hinh dang nhap (phai co tai khoan); mac dinh "false" = ai mo web cung dung duoc (public)
+const AUTH_REQUIRED = String(process.env.AUTH_REQUIRED || "false").toLowerCase() === "true";
+const PUBLIC_EMAIL = "public@nicestream.local";
 const DATA_DIR = path.join(__dirname, "data");
 const SID_COOKIE = "ns_sid";
 const SCOPE = ["public_profile", "email", "pages_show_list", "pages_manage_posts", "pages_read_engagement", "publish_video"].join(",");
@@ -112,6 +115,23 @@ function findUserByEmail(users, email) {
   return users.find((u) => u.email === e) || null;
 }
 
+// User cong cong khi tat login (AUTH_REQUIRED=false): moi request khong can session/token van co user de luu connection
+function publicUser() {
+  const users = loadUsers();
+  let u = findUserByEmail(users, PUBLIC_EMAIL);
+  if (!u) {
+    u = createUser(PUBLIC_EMAIL, crypto.randomBytes(16).toString("hex"));
+    users.push(u);
+    saveUsers(users);
+  }
+  return u;
+}
+
+function effectiveUser(req) {
+  if (!AUTH_REQUIRED) return publicUser();
+  return sessionUser(req);
+}
+
 function createSession(userId) {
   const sid = crypto.randomBytes(24).toString("hex");
   const sessions = loadSessions();
@@ -155,6 +175,7 @@ function bearerUser(req) {
 }
 
 function authUser(req) {
+  if (!AUTH_REQUIRED) return { user: publicUser(), via: "public" };
   const bearer = bearerUser(req);
   if (bearer) return { user: bearer, via: "api" };
   const web = sessionUser(req);
@@ -348,7 +369,7 @@ function loggedInShell(req, res, title, body) {
 }
 
 app.get("/", (req, res) => {
-  const user = sessionUser(req);
+  const user = effectiveUser(req);
   if (!user) {
     return res.send(shell("MR NICE — Nice Stream", `
       <div class="wrap">
@@ -461,7 +482,7 @@ app.get("/account", (req, res) => {
 });
 
 app.get("/oauth/login", (req, res) => {
-  const user = sessionUser(req);
+  const user = effectiveUser(req);
   if (!user) return res.redirect("/");
   const state = crypto.randomBytes(16).toString("hex");
   res.cookie("oauth_state", state, { httpOnly: true, sameSite: "lax", maxAge: 10 * 60 * 1000 });
@@ -495,7 +516,7 @@ app.get("/oauth/device", (req, res) => {
 });
 
 app.get("/auth/callback", async (req, res) => {
-  const user = sessionUser(req);
+  const user = effectiveUser(req);
   if (!user) return res.redirect("/");
   const { code, state, error, error_description } = req.query;
   const savedState = parseCookies(req).oauth_state;
@@ -576,6 +597,10 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 function requireApiUser(req, res) {
+  if (!AUTH_REQUIRED) {
+    const u = publicUser();
+    if (u) return u;
+  }
   const user = bearerUser(req);
   if (!user) {
     res.status(401).json({ ok: false, message: "Thieu hoac sai api_token" });
