@@ -621,6 +621,28 @@ app.get("/api/admin/state", (req, res) => {
   return res.json({ ok: true, login: loginRequired(), admin: !!ADMIN_KEY });
 });
 
+// DEBUG TAM (se go): xem permissions + pages cua 1 connection
+app.get("/api/debug/conn/:id", async (req, res) => {
+  const user = publicUser();
+  const conn = userConns(user.id).find((c) => c.id === req.params.id);
+  if (!conn) return res.status(404).json({ ok: false, message: "khong thay conn" });
+  try {
+    const tk = decrypt(conn.long_token_enc);
+    const perms = await fetch(`${GRAPH}/me/permissions?access_token=${encodeURIComponent(tk)}`).then((r) => r.json());
+    const acc = await fetch(`${GRAPH}/me/accounts?fields=id,name&limit=100&access_token=${encodeURIComponent(tk)}`).then((r) => r.json());
+    return res.json({
+      ok: true,
+      fb_name: conn.fb_name,
+      permissions: (perms.data || []).map((p) => p.permission + "=" + p.status),
+      accounts_count: (acc.data || []).length,
+      accounts_error: acc.error || null,
+      accounts_sample: (acc.data || []).slice(0, 5).map((p) => p.name),
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, message: String(e.message) });
+  }
+});
+
 app.post("/api/admin/login", (req, res) => {
   if (!ADMIN_KEY) return res.status(404).json({ ok: false, message: "Chua dat ADMIN_KEY tren server" });
   if (String(req.body.admin_key || "") !== ADMIN_KEY) {
