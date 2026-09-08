@@ -536,6 +536,7 @@ app.get("/logout", (req, res) => {
 });
 
 app.get("/account", (req, res) => {
+  if (!loginRequired()) return res.redirect("/");
   const { user } = authUser(req);
   if (!user) return res.redirect("/");
   const conns = userConns(user.id);
@@ -641,6 +642,7 @@ app.get("/auth/callback", async (req, res) => {
 });
 
 app.get("/oauth/disconnect", (req, res) => {
+  if (!loginRequired()) return res.redirect("/");
   const user = sessionUser(req);
   if (!user) return res.redirect("/");
   const conns = loadConns();
